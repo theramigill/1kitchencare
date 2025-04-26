@@ -1,0 +1,12 @@
+#!/bin/bash
+# This is a wrapper script for gradlew
+# It ensures that the Gradle wrapper is executable
+
+# Exit on error
+set -e
+
+# Make the gradlew script executable
+chmod +x "$0"
+
+# Execute the real gradlew script
+exec "./gradlew" "$@"

@@ -1,0 +1,31 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    max_build_duration: 60
+    environment:
+      node: 18.17.1
+      java: 11
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+      - name: Set up app.json
+        script: |
+          # Ensure app.json has the correct Android package name
+          if ! grep -q '"package":' ./app.json; then
+            jq '.expo.android += {"package": "com.kitchencare.app"}' ./app.json > ./app.json.tmp
+            mv ./app.json.tmp ./app.json
+          fi
+      - name: Generate Android directory
+        script: |
+          npx expo prebuild -p android --clean
+      - name: Make gradlew executable
+        script: |
+          cd android
+          chmod +x ./gradlew
+      - name: Build Android APK
+        script: |
+          cd android
+          ./gradlew assembleRelease
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
