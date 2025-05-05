@@ -24,7 +24,13 @@
       "package": "com.kitchencare.app",
       "versionCode": 1,
       "permissions": [],
-      "jsEngine": "hermes"
+      "jsEngine": "hermes",
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_API_KEY"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
