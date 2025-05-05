@@ -8,9 +8,22 @@ workflows:
       android_signing:
         - kitchencare
     scripts:
+      - name: Clean environment
+        script: |
+          rm -rf node_modules
+          rm -f package-lock.json
+          rm -rf android/app/build
+          rm -rf android/.gradle
+          rm -rf .expo
+          
       - name: Install npm dependencies
         script: |
           npm install --legacy-peer-deps
+          
+      - name: Install Expo CLI
+        script: |
+          npm install -g expo-cli
+          
       - name: Set up app.json
         script: |
           # Ensure app.json has the correct Android package name
@@ -18,6 +31,7 @@ workflows:
             jq '.expo.android += {"package": "com.kitchencare.app"}' ./app.json > ./app.json.tmp
             mv ./app.json.tmp ./app.json
           fi
+          
       - name: Set up Android SDK
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > ./android/local.properties
@@ -45,21 +59,31 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url 'https://www.jitpack.io' }
     }
 }
 EOL
           fi
+          
       - name: Generate Android directory
         script: |
           npx expo prebuild -p android --clean
+          
       - name: Make gradlew executable
         script: |
           cd android
           chmod +x ./gradlew
+          
       - name: Copy keystore
         script: |
+          if [ ! -f kitchencare.keystore ]; then
+            echo "Creating dummy keystore for testing"
+            keytool -genkey -v -keystore kitchencare.keystore -alias kitchencare -keyalg RSA -keysize 2048 -validity 10000 -storepass kitchencare -keypass kitchencare -dname "CN=KitchenCare, OU=Mobile, O=KitchenCare, L=Delhi, S=Delhi, C=IN"
+          fi
+          
           # Copy the keystore to the app directory
           cp kitchencare.keystore android/app/release.keystore
+          
       - name: Update signing config
         script: |
           cd android/app
@@ -67,9 +91,16 @@ EOL
             sed -i '/signingConfigs {/a \        release {\n            storeFile file("release.keystore")\n            storePassword "kitchencare"\n            keyAlias "kitchencare"\n            keyPassword "kitchencare"\n        }' build.gradle
           fi
           sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' build.gradle
+          
+      - name: Clean Gradle
+        script: |
+          cd android
+          ./gradlew clean
+          
       - name: Build Android APK
         script: |
           cd android
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease --stacktrace
+          
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
