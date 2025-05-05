@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "kitchencare-app",
+    "name": "KitchenCare+",
     "slug": "kitchencare-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,7 +23,8 @@
       },
       "package": "com.kitchencare.app",
       "versionCode": 1,
-      "permissions": []
+      "permissions": [],
+      "jsEngine": "hermes"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +32,21 @@
     "extra": {
       "eas": {
         "projectId": "kitchencare-app"
+      }
+    },
+    "plugins": [
+      "expo-build-properties"
+    ],
+    "build": {
+      "preview": {
+        "android": {
+          "buildType": "apk"
+        }
+      },
+      "production": {
+        "android": {
+          "buildType": "app-bundle"
+        }
       }
     }
   }
