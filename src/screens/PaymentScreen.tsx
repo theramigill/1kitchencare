@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Alert, Platform, Linking } from 'react-native';
 import { Text, Card, Button, Title, Paragraph, TextInput, RadioButton, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import RazorpayCheckout from 'react-native-razorpay';
 
 type PaymentRouteParams = {
   service?: string;
@@ -28,15 +27,13 @@ const PaymentScreen = () => {
     address 
   } = (route.params as PaymentRouteParams) || {};
 
-  const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [paymentMethod, setPaymentMethod] = useState('online');
   const [cardNumber, setCardNumber] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
   const [cardName, setCardName] = useState('');
   const [upiId, setUpiId] = useState('');
   const [loading, setLoading] = useState(false);
-  
-  const razorpayKeyId = 'rzp_test_1DP5mmOlF5G5ag';
 
   const getItemTitle = () => {
     if (planName) return planName;
@@ -99,59 +96,28 @@ const PaymentScreen = () => {
     }
   };
 
-  const startRazorpayPayment = () => {
-    const amountInPaise = parseFloat(price?.replace(/[^\d.]/g, '') || '0') * 100;
+  const simulatePayment = () => {
+    const paymentId = 'mock_payment_id_' + Date.now();
     
-    const options = useMemo(() => ({
-      description: `Payment for ${getItemTitle()}`,
-      image: require('../../assets/logo.png'), // Local logo
-      currency: 'INR',
-      key: razorpayKeyId,
-      amount: amountInPaise.toString(),
-      name: 'KitchenCare+',
-      prefill: {
-        email: 'customer@example.com',
-        contact: '9999999999',
-        name: 'Customer Name'
-      },
-      theme: { color: '#1976D2' }
-    }), [getItemTitle(), amountInPaise]);
-
-    RazorpayCheckout.open(options)
-      .then((data: { razorpay_payment_id: string }) => {
-        handlePaymentSuccess(data.razorpay_payment_id);
-        setLoading(false);
-      })
-      .catch((error: any) => {
-        console.error('Razorpay Error:', error);
-        setLoading(false);
-        
-        let errorMessage = 'Payment failed. Please try again.';
-        if (error.code === 'BAD_REQUEST_ERROR') {
-          errorMessage = 'Transaction cancelled by user';
-        }
-        
-        Alert.alert('Payment Failed', errorMessage);
-      });
+    setTimeout(() => {
+      handlePaymentSuccess(paymentId);
+      setLoading(false);
+    }, 2000);
   };
 
   const handlePayment = async () => {
     setLoading(true);
     
-    if (paymentMethod === 'razorpay') {
-      startRazorpayPayment();
-    } else {
-      setTimeout(async () => {
-        try {
-          await handlePaymentSuccess('mock_payment_id_' + Date.now());
-          setLoading(false);
-        } catch (error) {
-          console.error('Error processing payment:', error);
-          setLoading(false);
-          Alert.alert('Payment Failed', 'There was an error processing your payment. Please try again.');
-        }
-      }, 2000);
-    }
+    setTimeout(async () => {
+      try {
+        await handlePaymentSuccess('mock_payment_id_' + Date.now());
+        setLoading(false);
+      } catch (error) {
+        console.error('Error processing payment:', error);
+        setLoading(false);
+        Alert.alert('Payment Failed', 'There was an error processing your payment. Please try again.');
+      }
+    }, 2000);
   };
 
   const getPlanFeatures = (plan) => {
@@ -226,8 +192,8 @@ const PaymentScreen = () => {
             
             <RadioButton.Group onValueChange={value => setPaymentMethod(value)} value={paymentMethod}>
               <View style={styles.paymentOption}>
-                <RadioButton value="razorpay" color={colors.primary} />
-                <Text style={styles.paymentOptionText}>Pay Online (Razorpay)</Text>
+                <RadioButton value="online" color={colors.primary} />
+                <Text style={styles.paymentOptionText}>Pay Online</Text>
               </View>
               
               <View style={styles.paymentOption}>
