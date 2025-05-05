@@ -1,7 +1,9 @@
+name: KitchenCare+ Android Build
+
 workflows:
   android-workflow:
     name: Android Build
-    max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
       node: 18.17.1
       java: 11
@@ -14,23 +16,10 @@ workflows:
           rm -f package-lock.json
           rm -rf android/app/build
           rm -rf android/.gradle
-          rm -rf .expo
           
       - name: Install npm dependencies
         script: |
-          npm install --legacy-peer-deps
-          
-      - name: Install Expo CLI
-        script: |
-          npm install -g expo-cli
-          
-      - name: Set up app.json
-        script: |
-          # Ensure app.json has the correct Android package name and newArchEnabled is false
-          jq '.expo.android += {"package": "com.kitchencare.app"}' ./app.json > ./app.json.tmp
-          mv ./app.json.tmp ./app.json
-          jq '.expo.newArchEnabled = false' ./app.json > ./app.json.tmp
-          mv ./app.json.tmp ./app.json
+          npm install
           
       - name: Set up Android SDK
         script: |
@@ -42,21 +31,6 @@ workflows:
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
           echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
           
-          mkdir -p ./android/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ./android/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ./android/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ./android/licenses/android-sdk-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > ./android/licenses/android-sdk-preview-license
-          
-      - name: Generate Android directory
-        script: |
-          npx expo prebuild -p android --clean
-          
-      - name: Make gradlew executable
-        script: |
-          cd android
-          chmod +x ./gradlew
-          
       - name: Copy keystore
         script: |
           if [ ! -f kitchencare.keystore ]; then
@@ -67,13 +41,10 @@ workflows:
           # Copy the keystore to the app directory
           cp kitchencare.keystore android/app/release.keystore
           
-      - name: Update signing config
+      - name: Make gradlew executable
         script: |
-          cd android/app
-          if ! grep -q "release {" build.gradle; then
-            sed -i '/signingConfigs {/a \        release {\n            storeFile file("release.keystore")\n            storePassword "kitchencare"\n            keyAlias "kitchencare"\n            keyPassword "kitchencare"\n        }' build.gradle
-          fi
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/g' build.gradle
+          cd android
+          chmod +x ./gradlew
           
       - name: Clean Gradle
         script: |
@@ -88,3 +59,4 @@ workflows:
           
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
+
