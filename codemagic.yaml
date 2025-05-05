@@ -26,44 +26,27 @@ workflows:
           
       - name: Set up app.json
         script: |
-          # Ensure app.json has the correct Android package name
-          if ! grep -q '"package":' ./app.json; then
-            jq '.expo.android += {"package": "com.kitchencare.app"}' ./app.json > ./app.json.tmp
-            mv ./app.json.tmp ./app.json
-          fi
+          # Ensure app.json has the correct Android package name and newArchEnabled is false
+          jq '.expo.android += {"package": "com.kitchencare.app"}' ./app.json > ./app.json.tmp
+          mv ./app.json.tmp ./app.json
+          jq '.expo.newArchEnabled = false' ./app.json > ./app.json.tmp
+          mv ./app.json.tmp ./app.json
           
       - name: Set up Android SDK
         script: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > ./android/local.properties
-          if [ ! -f ./android/build.gradle ]; then
-            mkdir -p ./android
-            cat > ./android/build.gradle << 'EOL'
-buildscript {
-    ext {
-        buildToolsVersion = "33.0.0"
-        minSdkVersion = 21
-        compileSdkVersion = 33
-        targetSdkVersion = 33
-        ndkVersion = "23.1.7779620"
-    }
-    repositories {
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath("com.android.tools.build:gradle:7.3.1")
-        classpath("com.facebook.react:react-native-gradle-plugin")
-    }
-}
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url 'https://www.jitpack.io' }
-    }
-}
-EOL
-          fi
+          
+          mkdir -p $ANDROID_SDK_ROOT/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+          
+          mkdir -p ./android/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ./android/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ./android/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> ./android/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > ./android/licenses/android-sdk-preview-license
           
       - name: Generate Android directory
         script: |
@@ -95,12 +78,13 @@ EOL
       - name: Clean Gradle
         script: |
           cd android
-          ./gradlew clean
+          ./gradlew clean --stacktrace || true
           
       - name: Build Android APK
         script: |
           cd android
-          ./gradlew assembleRelease --stacktrace
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          ./gradlew assembleRelease --stacktrace --info
           
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
