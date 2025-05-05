@@ -1,14 +1,33 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Image } from 'react-native';
-import { Text, Card, Button, Title, Paragraph, TextInput, useTheme, Divider } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, Image, Alert, Platform } from 'react-native';
+import { Text, Card, Button, Title, Paragraph, TextInput, useTheme, Divider, HelperText } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as DocumentPicker from 'react-native-document-picker';
 import * as ImagePicker from 'react-native-image-picker';
+
+type RootStackParamList = {
+  Payment: {
+    service: string;
+    price: string;
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+  };
+};
+
+type KitchenDesignScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Payment'>;
+
+type PhotoType = {
+  uri: string;
+  name?: string;
+  type?: string;
+};
 
 const KitchenDesignScreen = () => {
   const { colors } = useTheme();
-  const navigation = useNavigation();
+  const navigation = useNavigation<KitchenDesignScreenNavigationProp>();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,31 +35,102 @@ const KitchenDesignScreen = () => {
   const [address, setAddress] = useState('');
   const [kitchenSize, setKitchenSize] = useState('');
   const [requirements, setRequirements] = useState('');
-  const [kitchenPhotos, setKitchenPhotos] = useState([]);
+  const [kitchenPhotos, setKitchenPhotos] = useState<PhotoType[]>([]);
+  
+  const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [addressError, setAddressError] = useState('');
 
   const handlePickImages = async () => {
     try {
-      setKitchenPhotos([...kitchenPhotos, { uri: 'photo_placeholder' }]);
+      const result = await ImagePicker.launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 5,
+        includeBase64: false,
+        maxHeight: 1200,
+        maxWidth: 1200,
+      });
+      
+      if (result.didCancel) {
+        console.log('User cancelled image picker');
+      } else if (result.errorCode) {
+        console.log('ImagePicker Error: ', result.errorMessage);
+        Alert.alert('Error', 'Failed to pick image: ' + result.errorMessage);
+      } else if (result.assets && result.assets.length > 0) {
+        const newPhotos = result.assets.map(asset => ({
+          uri: asset.uri || '',
+          name: asset.fileName,
+          type: asset.type
+        }));
+        
+        setKitchenPhotos([...kitchenPhotos, ...newPhotos]);
+      }
     } catch (err) {
       console.error(err);
+      Alert.alert('Error', 'Failed to pick image');
     }
+  };
+  
+  const validateForm = () => {
+    let isValid = true;
+    
+    if (!name.trim()) {
+      setNameError('Name is required');
+      isValid = false;
+    } else {
+      setNameError('');
+    }
+    
+    if (!phone.trim()) {
+      setPhoneError('Phone number is required');
+      isValid = false;
+    } else if (!/^\d{10}$/.test(phone.trim())) {
+      setPhoneError('Please enter a valid 10-digit phone number');
+      isValid = false;
+    } else {
+      setPhoneError('');
+    }
+    
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Please enter a valid email address');
+      isValid = false;
+    } else {
+      setEmailError('');
+    }
+    
+    if (!address.trim()) {
+      setAddressError('Address is required');
+      isValid = false;
+    } else {
+      setAddressError('');
+    }
+    
+    return isValid;
   };
 
   const handleBookDesign = () => {
-    navigation.navigate('Payment', { 
-      service: 'Kitchen Design Session', 
-      price: '₹1500',
-      name,
-      phone,
-      email,
-      address
-    });
+    if (validateForm()) {
+      navigation.navigate('Payment', { 
+        service: 'Kitchen Design Session', 
+        price: '₹1500',
+        name,
+        phone,
+        email,
+        address
+      });
+    } else {
+      Alert.alert('Form Error', 'Please fill in all required fields correctly');
+    }
   };
 
   return (
     <ScrollView style={styles.container}>
       <LinearGradient
-        colors={[colors.secondary, '#FF9800']}
+        colors={[colors.primary, colors.secondary]}
         style={styles.header}
       >
         <Text style={styles.headerTitle}>Design Your Dream Kitchen</Text>
@@ -124,7 +214,9 @@ const KitchenDesignScreen = () => {
                 value={name}
                 onChangeText={setName}
                 style={styles.input}
+                error={!!nameError}
               />
+              {nameError ? <HelperText type="error">{nameError}</HelperText> : null}
               
               <TextInput
                 mode="outlined"
@@ -134,7 +226,9 @@ const KitchenDesignScreen = () => {
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
                 style={styles.input}
+                error={!!phoneError}
               />
+              {phoneError ? <HelperText type="error">{phoneError}</HelperText> : null}
               
               <TextInput
                 mode="outlined"
@@ -144,7 +238,9 @@ const KitchenDesignScreen = () => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 style={styles.input}
+                error={!!emailError}
               />
+              {emailError ? <HelperText type="error">{emailError}</HelperText> : null}
             </View>
 
             <View style={styles.formSection}>
@@ -159,7 +255,9 @@ const KitchenDesignScreen = () => {
                 multiline
                 numberOfLines={3}
                 style={styles.input}
+                error={!!addressError}
               />
+              {addressError ? <HelperText type="error">{addressError}</HelperText> : null}
               
               <TextInput
                 mode="outlined"
@@ -191,18 +289,24 @@ const KitchenDesignScreen = () => {
               
               <View style={styles.photoSection}>
                 {kitchenPhotos.map((photo, index) => (
-                  <View key={index} style={styles.photoPlaceholder}>
-                    <Text>Photo {index + 1}</Text>
+                  <View key={index} style={styles.photoContainer}>
+                    <Image 
+                      source={{ uri: photo.uri }} 
+                      style={styles.photoThumbnail} 
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.photoLabel}>Photo {index + 1}</Text>
                   </View>
                 ))}
                 
                 <Button 
-                  mode="outlined" 
+                  mode="contained" 
                   onPress={handlePickImages}
                   style={styles.photoButton}
                   icon="camera"
+                  color={colors.primary}
                 >
-                  Add Photos
+                  Upload Kitchen Photos
                 </Button>
               </View>
             </View>
@@ -362,8 +466,27 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 4,
   },
+  photoContainer: {
+    width: 100,
+    height: 120,
+    marginRight: 10,
+    marginBottom: 15,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  photoThumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 4,
+  },
+  photoLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+  },
   photoButton: {
     marginTop: 10,
+    width: '100%',
   },
   cardActions: {
     justifyContent: 'center',
