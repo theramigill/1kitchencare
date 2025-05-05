@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, Alert, Platform, Linking } from 'react-native';
 import { Text, Card, Button, Title, Paragraph, TextInput, RadioButton, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -102,7 +102,7 @@ const PaymentScreen = () => {
   const startRazorpayPayment = () => {
     const amountInPaise = parseFloat(price?.replace(/[^\d.]/g, '') || '0') * 100;
     
-    const options = {
+    const options = useMemo(() => ({
       description: `Payment for ${getItemTitle()}`,
       image: require('../../assets/logo.png'), // Local logo
       currency: 'INR',
@@ -115,7 +115,7 @@ const PaymentScreen = () => {
         name: 'Customer Name'
       },
       theme: { color: '#1976D2' }
-    };
+    }), [getItemTitle(), amountInPaise]);
 
     RazorpayCheckout.open(options)
       .then((data: { razorpay_payment_id: string }) => {

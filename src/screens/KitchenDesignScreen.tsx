@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Image, Alert, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, Image, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Text, Card, Button, Title, Paragraph, TextInput, useTheme, Divider, HelperText } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'react-native-image-picker';
+import { useMemo } from 'react';
 
 type RootStackParamList = {
   Payment: {
@@ -36,6 +37,7 @@ const KitchenDesignScreen = () => {
   const [kitchenSize, setKitchenSize] = useState('');
   const [requirements, setRequirements] = useState('');
   const [kitchenPhotos, setKitchenPhotos] = useState<PhotoType[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
   
   const [nameError, setNameError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -44,12 +46,15 @@ const KitchenDesignScreen = () => {
 
   const handlePickImages = async () => {
     try {
+      setIsLoadingImages(true);
+      
       const result = await ImagePicker.launchImageLibrary({
         mediaType: 'photo',
-        selectionLimit: 5,
+        selectionLimit: 3, // Limit to 3 images at a time for better performance
         includeBase64: false,
-        maxHeight: 1200,
-        maxWidth: 1200,
+        maxHeight: 800, // Reduced for better performance
+        maxWidth: 800, // Reduced for better performance
+        quality: 0.7, // Compress images to 70% quality
       });
       
       if (result.didCancel) {
@@ -58,17 +63,23 @@ const KitchenDesignScreen = () => {
         console.log('ImagePicker Error: ', result.errorMessage);
         Alert.alert('Error', 'Failed to pick image: ' + result.errorMessage);
       } else if (result.assets && result.assets.length > 0) {
-        const newPhotos = result.assets.map(asset => ({
-          uri: asset.uri || '',
-          name: asset.fileName,
-          type: asset.type
-        }));
-        
-        setKitchenPhotos([...kitchenPhotos, ...newPhotos]);
+        setTimeout(() => {
+          const newPhotos = result.assets.map(asset => ({
+            uri: asset.uri || '',
+            name: asset.fileName,
+            type: asset.type
+          }));
+          
+          setKitchenPhotos(prevPhotos => [...prevPhotos, ...newPhotos]);
+          setIsLoadingImages(false);
+        }, 100);
+      } else {
+        setIsLoadingImages(false);
       }
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to pick image');
+      setIsLoadingImages(false);
     }
   };
   
@@ -288,16 +299,27 @@ const KitchenDesignScreen = () => {
               </Text>
               
               <View style={styles.photoSection}>
-                {kitchenPhotos.map((photo, index) => (
-                  <View key={index} style={styles.photoContainer}>
-                    <Image 
-                      source={{ uri: photo.uri }} 
-                      style={styles.photoThumbnail} 
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.photoLabel}>Photo {index + 1}</Text>
+                {useMemo(() => 
+                  kitchenPhotos.map((photo, index) => (
+                    <View key={index} style={styles.photoContainer}>
+                      <Image 
+                        source={{ uri: photo.uri }} 
+                        style={styles.photoThumbnail} 
+                        resizeMode="cover"
+                        progressiveRenderingEnabled={true}
+                        fadeDuration={300}
+                      />
+                      <Text style={styles.photoLabel}>Photo {index + 1}</Text>
+                    </View>
+                  )), [kitchenPhotos]
+                )}
+                
+                {isLoadingImages && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={styles.loadingText}>Processing images...</Text>
                   </View>
-                ))}
+                )}
                 
                 <Button 
                   mode="contained" 
@@ -305,6 +327,8 @@ const KitchenDesignScreen = () => {
                   style={styles.photoButton}
                   icon="camera"
                   color={colors.primary}
+                  disabled={isLoadingImages}
+                  loading={isLoadingImages}
                 >
                   Upload Kitchen Photos
                 </Button>
@@ -515,6 +539,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'right',
+  },
+  loadingContainer: {
+    width: '100%',
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
   },
 });
 

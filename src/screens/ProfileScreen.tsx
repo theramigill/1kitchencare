@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet, Image, TouchableOpacity, Alert, Linking } from 'react-native';
 import { Text, Card, Button, Title, Paragraph, Avatar, List, Divider, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'react-native-image-picker';
@@ -254,7 +254,29 @@ const ProfileScreen = () => {
               title="Help & Support"
               left={props => <List.Icon {...props} icon="help-circle" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => {}}
+              onPress={() => {
+                Linking.openURL('mailto:support@kitchencareplus.in?subject=KitchenCare%2B%20Support');
+              }}
+            />
+            <Divider />
+            <List.Item
+              title="Terms & Conditions"
+              left={props => <List.Icon {...props} icon="file-document" />}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => Alert.alert(
+                'Terms & Conditions',
+                'KitchenCare+ Terms and Conditions\n\nThese terms and conditions outline the rules and regulations for the use of KitchenCare+ services.\n\nBy using our services, you agree to these terms and conditions.'
+              )}
+            />
+            <Divider />
+            <List.Item
+              title="Privacy Policy"
+              left={props => <List.Icon {...props} icon="shield-account" />}
+              right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => Alert.alert(
+                'Privacy Policy',
+                'KitchenCare+ Privacy Policy\n\nYour privacy is important to us. It is KitchenCare+ policy to respect your privacy regarding any information we may collect from you through our app.\n\nWe only ask for personal information when we truly need it to provide a service to you.'
+              )}
             />
           </Card.Content>
         </Card>
@@ -281,6 +303,14 @@ const ProfileScreen = () => {
               <Text style={styles.contactLabel}>Email:</Text>
               <Text style={styles.contactValue}>support@kitchencareplus.in</Text>
             </View>
+            <Button 
+              mode="contained" 
+              icon="email"
+              onPress={() => Linking.openURL('mailto:support@kitchencareplus.in?subject=KitchenCare%2B%20Support')}
+              style={[styles.contactButton, { backgroundColor: '#1976D2' }]}
+            >
+              Contact Support
+            </Button>
           </Card.Content>
         </Card>
       </View>
@@ -431,6 +461,9 @@ const styles = StyleSheet.create({
   },
   contactValue: {
     flex: 1,
+  },
+  contactButton: {
+    marginTop: 15,
   },
 });
 
