@@ -1,29 +1,14 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  User as FirebaseUser
-} from 'firebase/auth';
 
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "kitchencare-app.firebaseapp.com",
-  projectId: "kitchencare-app",
-  storageBucket: "kitchencare-app.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+type User = {
+  uid: string;
+  email: string;
+  displayName?: string;
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
 type AuthContextType = {
-  user: FirebaseUser | null;
+  user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -32,8 +17,12 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const MOCK_USERS = [
+  { email: 'demo@kitchencareplus.in', password: 'password123', displayName: 'Demo User' }
+];
+
 const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +30,8 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       try {
         const userString = await AsyncStorage.getItem('user');
         if (userString) {
+          const userData = JSON.parse(userString);
+          setUser(userData);
         }
       } catch (error) {
         console.error('Error checking stored user:', error);
@@ -49,25 +40,25 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
     };
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      
-      if (currentUser) {
-        AsyncStorage.setItem('user', JSON.stringify(currentUser));
-      } else {
-        AsyncStorage.removeItem('user');
-      }
-    });
-
     checkUser();
-
-    return () => unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const mockUser = MOCK_USERS.find(u => u.email === email && u.password === password);
+      
+      if (!mockUser) {
+        throw new Error('Invalid email or password');
+      }
+      
+      const userData: User = {
+        uid: `user-${Date.now()}`,
+        email: mockUser.email,
+        displayName: mockUser.displayName
+      };
+      
+      setUser(userData);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Error signing in:', error);
       throw error;
@@ -76,7 +67,18 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   const signUp = async (email: string, password: string) => {
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      if (MOCK_USERS.some(u => u.email === email)) {
+        throw new Error('Email already in use');
+      }
+      
+      const userData: User = {
+        uid: `user-${Date.now()}`,
+        email: email,
+        displayName: email.split('@')[0]
+      };
+      
+      setUser(userData);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
       console.error('Error signing up:', error);
       throw error;
@@ -85,7 +87,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      setUser(null);
       await AsyncStorage.removeItem('user');
     } catch (error) {
       console.error('Error signing out:', error);

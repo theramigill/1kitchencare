@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Text, Card, Button, Title, Paragraph, useTheme } from 'react-native-paper';
-import { LinearGradient } from 'expo-linear-gradient';
+import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { getGradient } from '../theme';
 
