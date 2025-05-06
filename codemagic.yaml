@@ -1,31 +1,65 @@
+name: KitchenCare+ Android Build
+
 workflows:
   android-workflow:
     name: Android Build
-    max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
       node: 18.17.1
       java: 11
+      android_signing:
+        - kitchencare
     scripts:
+      - name: Clean environment
+        script: |
+          rm -rf node_modules
+          rm -f package-lock.json
+          rm -rf android/app/build
+          rm -rf android/.gradle
+          
       - name: Install npm dependencies
         script: |
-          npm install --legacy-peer-deps
-      - name: Set up app.json
+          npm install
+          
+      - name: Set up Android SDK
         script: |
-          # Ensure app.json has the correct Android package name
-          if ! grep -q '"package":' ./app.json; then
-            jq '.expo.android += {"package": "com.kitchencare.app"}' ./app.json > ./app.json.tmp
-            mv ./app.json.tmp ./app.json
-          fi
-      - name: Generate Android directory
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > ./android/local.properties
+          
+          mkdir -p $ANDROID_SDK_ROOT/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+          
+      - name: Set up keystore
         script: |
-          npx expo prebuild -p android --clean
+          echo "Using Codemagic's secure keystore configuration"
+          
+          export KEYSTORE_PATH=$CM_KEYSTORE_PATH
+          export KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD
+          export KEY_ALIAS=$CM_KEY_ALIAS
+          export KEY_PASSWORD=$CM_KEY_PASSWORD
+          
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> $CM_ENV
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $CM_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $CM_ENV
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> $CM_ENV
+          
       - name: Make gradlew executable
         script: |
           cd android
           chmod +x ./gradlew
+          
+      - name: Clean Gradle
+        script: |
+          cd android
+          ./gradlew clean --stacktrace || true
+          
       - name: Build Android APK
         script: |
           cd android
-          ./gradlew assembleRelease
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          ./gradlew assembleRelease --stacktrace --info
+          
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
