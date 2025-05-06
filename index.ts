@@ -1,4 +1,4 @@
 import { AppRegistry } from 'react-native';
 import App from './src/App';
 
-AppRegistry.registerComponent('kitchencare-app', () => App);
+AppRegistry.registerComponent('KitchenCarePlus', () => App);
