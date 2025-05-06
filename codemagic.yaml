@@ -31,15 +31,19 @@ workflows:
           echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> $ANDROID_SDK_ROOT/licenses/android-sdk-license
           echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
           
-      - name: Copy keystore
+      - name: Set up keystore
         script: |
-          if [ ! -f kitchencare.keystore ]; then
-            echo "Creating dummy keystore for testing"
-            keytool -genkey -v -keystore kitchencare.keystore -alias kitchencare -keyalg RSA -keysize 2048 -validity 10000 -storepass kitchencare -keypass kitchencare -dname "CN=KitchenCare, OU=Mobile, O=KitchenCare, L=Delhi, S=Delhi, C=IN"
-          fi
+          echo "Using Codemagic's secure keystore configuration"
           
-          # Copy the keystore to the app directory
-          cp kitchencare.keystore android/app/release.keystore
+          export KEYSTORE_PATH=$CM_KEYSTORE_PATH
+          export KEYSTORE_PASSWORD=$CM_KEYSTORE_PASSWORD
+          export KEY_ALIAS=$CM_KEY_ALIAS
+          export KEY_PASSWORD=$CM_KEY_PASSWORD
+          
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> $CM_ENV
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> $CM_ENV
+          echo "KEY_ALIAS=$KEY_ALIAS" >> $CM_ENV
+          echo "KEY_PASSWORD=$KEY_PASSWORD" >> $CM_ENV
           
       - name: Make gradlew executable
         script: |
@@ -59,4 +63,3 @@ workflows:
           
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
-
