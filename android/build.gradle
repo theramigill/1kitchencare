@@ -37,4 +37,12 @@ allprojects {
         mavenCentral()
         maven { url 'https://www.jitpack.io' }
     }
+
+    // ✅ DeepSeek patch to force correct versions
+    configurations.all {
+        resolutionStrategy {
+            force "androidx.activity:activity:1.6.1"
+            force "androidx.fragment:fragment:1.5.5"
+        }
+    }
 }
